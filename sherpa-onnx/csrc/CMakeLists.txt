@@ -438,10 +438,18 @@ if(SHERPA_ONNX_ENABLE_WEBSOCKET AND SHERPA_ONNX_ENABLE_BINARY)
   )
   target_link_libraries(sherpa-onnx-online-websocket-client sherpa-onnx-core)
 
+  add_executable(sherpa-onnx-kws-websocket-server
+    kws-websocket-server.cc
+    kws-websocket-server-impl.cc
+  )
+  target_link_libraries(sherpa-onnx-kws-websocket-server sherpa-onnx-core)
+
   if(NOT WIN32)
     target_compile_options(sherpa-onnx-online-websocket-server PRIVATE -Wno-deprecated-declarations)
 
     target_compile_options(sherpa-onnx-online-websocket-client PRIVATE -Wno-deprecated-declarations)
+
+    target_compile_options(sherpa-onnx-kws-websocket-server PRIVATE -Wno-deprecated-declarations)
   endif()
 
   # For offline websocket
@@ -462,6 +470,9 @@ if(SHERPA_ONNX_ENABLE_WEBSOCKET AND SHERPA_ONNX_ENABLE_BINARY)
     target_link_libraries(sherpa-onnx-online-websocket-client "-Wl,-rpath,${SHERPA_ONNX_RPATH_ORIGIN}/../lib")
     target_link_libraries(sherpa-onnx-online-websocket-client "-Wl,-rpath,${SHERPA_ONNX_RPATH_ORIGIN}/../../../sherpa_onnx/lib")
 
+    target_link_libraries(sherpa-onnx-kws-websocket-server "-Wl,-rpath,${SHERPA_ONNX_RPATH_ORIGIN}/../lib")
+    target_link_libraries(sherpa-onnx-kws-websocket-server "-Wl,-rpath,${SHERPA_ONNX_RPATH_ORIGIN}/../../../sherpa_onnx/lib")
+
     target_link_libraries(sherpa-onnx-offline-websocket-server "-Wl,-rpath,${SHERPA_ONNX_RPATH_ORIGIN}/../lib")
     target_link_libraries(sherpa-onnx-offline-websocket-server "-Wl,-rpath,${SHERPA_ONNX_RPATH_ORIGIN}/../../../sherpa_onnx/lib")
 
@@ -469,6 +480,7 @@ if(SHERPA_ONNX_ENABLE_WEBSOCKET AND SHERPA_ONNX_ENABLE_BINARY)
       target_link_libraries(sherpa-onnx-online-websocket-server "-Wl,-rpath,${SHERPA_ONNX_RPATH_ORIGIN}/../lib/python${PYTHON_VERSION}/site-packages/sherpa_onnx/lib")
       target_link_libraries(sherpa-onnx-online-websocket-client "-Wl,-rpath,${SHERPA_ONNX_RPATH_ORIGIN}/../lib/python${PYTHON_VERSION}/site-packages/sherpa_onnx/lib")
       target_link_libraries(sherpa-onnx-offline-websocket-server "-Wl,-rpath,${SHERPA_ONNX_RPATH_ORIGIN}/../lib/python${PYTHON_VERSION}/site-packages/sherpa_onnx/lib")
+      target_link_libraries(sherpa-onnx-kws-websocket-server "-Wl,-rpath,${SHERPA_ONNX_RPATH_ORIGIN}/../lib/python${PYTHON_VERSION}/site-packages/sherpa_onnx/lib")
     endif()
   endif()
 
@@ -477,6 +489,7 @@ if(SHERPA_ONNX_ENABLE_WEBSOCKET AND SHERPA_ONNX_ENABLE_BINARY)
       sherpa-onnx-online-websocket-server
       sherpa-onnx-online-websocket-client
       sherpa-onnx-offline-websocket-server
+      sherpa-onnx-kws-websocket-server
     DESTINATION
       bin
   )
