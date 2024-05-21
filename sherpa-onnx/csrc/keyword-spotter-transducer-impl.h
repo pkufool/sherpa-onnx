@@ -111,6 +111,7 @@ class KeywordSpotterTransducerImpl : public KeywordSpotterImpl {
   std::unique_ptr<OnlineStream> CreateStream(
       const std::string &keywords) const override {
     auto kws = std::regex_replace(keywords, std::regex("/"), "\n");
+    SHERPA_ONNX_LOGE("Receive keywords %s ", kws.c_str());
     std::istringstream is(kws);
 
     std::vector<std::vector<int32_t>> current_ids;

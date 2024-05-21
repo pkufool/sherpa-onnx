@@ -57,7 +57,8 @@ std::shared_ptr<Connection> KwsWebsocketDecoder::GetOrCreateConnection(
   } else {
     // create a new connection
     const std::string &keywords = msg->get_payload();
-    std::shared_ptr<OnlineStream> s = keyword_spotter_->CreateStream(keywords);
+    //std::shared_ptr<OnlineStream> s = keyword_spotter_->CreateStream(keywords);
+    std::shared_ptr<OnlineStream> s = keyword_spotter_->CreateStream();
     auto c = std::make_shared<Connection>(hdl, s);
     connections_.insert({hdl, c});
     return c;
