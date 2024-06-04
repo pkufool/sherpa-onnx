@@ -77,8 +77,7 @@ class KwsWebsocketDecoder {
    */
   explicit KwsWebsocketDecoder(KwsWebsocketServer *server);
 
-  std::shared_ptr<Connection> GetOrCreateConnection(connection_hdl hdl,
-                                                    server::message_ptr msg);
+  std::shared_ptr<Connection> GetOrCreateConnection(connection_hdl hdl);
 
   // Compute features for a stream given audio samples
   void AcceptWaveform(std::shared_ptr<Connection> c);
@@ -87,6 +86,8 @@ class KwsWebsocketDecoder {
   void InputFinished(std::shared_ptr<Connection> c);
 
   void Run();
+
+  void ResetStream(std::shared_ptr<Connection> c, const std::string &keywords);
 
  private:
   void ProcessConnections(const asio::error_code &ec);

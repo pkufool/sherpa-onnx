@@ -49,15 +49,12 @@ KwsWebsocketDecoder::KwsWebsocketDecoder(KwsWebsocketServer *server)
 }
 
 std::shared_ptr<Connection> KwsWebsocketDecoder::GetOrCreateConnection(
-    connection_hdl hdl, server::message_ptr msg) {
+    connection_hdl hdl) {
   std::lock_guard<std::mutex> lock(mutex_);
   auto it = connections_.find(hdl);
   if (it != connections_.end()) {
     return it->second;
   } else {
-    // create a new connection
-    const std::string &keywords = msg->get_payload();
-    //std::shared_ptr<OnlineStream> s = keyword_spotter_->CreateStream(keywords);
     std::shared_ptr<OnlineStream> s = keyword_spotter_->CreateStream();
     auto c = std::make_shared<Connection>(hdl, s);
     connections_.insert({hdl, c});
@@ -100,6 +97,12 @@ void KwsWebsocketDecoder::Run() {
 
   timer_.async_wait(
       [this](const asio::error_code &ec) { ProcessConnections(ec); });
+}
+
+void KwsWebsocketDecoder::ResetStream(std::shared_ptr<Connection> c,
+                                      const std::string &keywords) {
+  std::shared_ptr<OnlineStream> s = keyword_spotter_->CreateStream(keywords);
+  c->s = s;
 }
 
 void KwsWebsocketDecoder::ProcessConnections(const asio::error_code &ec) {
@@ -285,7 +288,7 @@ bool KwsWebsocketServer::Contains(connection_hdl hdl) const {
 
 void KwsWebsocketServer::OnMessage(connection_hdl hdl,
                                    server::message_ptr msg) {
-  auto c = decoder_.GetOrCreateConnection(hdl, msg);
+  auto c = decoder_.GetOrCreateConnection(hdl);
 
   const std::string &payload = msg->get_payload();
 
@@ -293,6 +296,8 @@ void KwsWebsocketServer::OnMessage(connection_hdl hdl,
     case websocketpp::frame::opcode::text:
       if (payload == "Done") {
         asio::post(io_work_, [this, c]() { decoder_.InputFinished(c); });
+      } else {
+        decoder_.ResetStream(c, payload);
       }
       break;
     case websocketpp::frame::opcode::binary: {
