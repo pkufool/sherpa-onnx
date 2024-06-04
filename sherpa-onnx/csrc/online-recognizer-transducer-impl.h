@@ -15,8 +15,6 @@
 #include <vector>
 
 #if __ANDROID_API__ >= 9
-#include <strstream>
-
 #include "android/asset_manager.h"
 #include "android/asset_manager_jni.h"
 #endif
@@ -33,15 +31,14 @@
 #include "sherpa-onnx/csrc/onnx-utils.h"
 #include "sherpa-onnx/csrc/symbol-table.h"
 #include "sherpa-onnx/csrc/utils.h"
+#include "ssentencepiece/csrc/ssentencepiece.h"
 
 namespace sherpa_onnx {
 
-static OnlineRecognizerResult Convert(const OnlineTransducerDecoderResult &src,
-                                      const SymbolTable &sym_table,
-                                      float frame_shift_ms,
-                                      int32_t subsampling_factor,
-                                      int32_t segment,
-                                      int32_t frames_since_start) {
+OnlineRecognizerResult Convert(const OnlineTransducerDecoderResult &src,
+                               const SymbolTable &sym_table,
+                               float frame_shift_ms, int32_t subsampling_factor,
+                               int32_t segment, int32_t frames_since_start) {
   OnlineRecognizerResult r;
   r.tokens.reserve(src.tokens.size());
   r.timestamps.reserve(src.tokens.size());
@@ -94,6 +91,11 @@ class OnlineRecognizerTransducerImpl : public OnlineRecognizerImpl {
     model_->SetFeatureDim(config.feat_config.feature_dim);
 
     if (config.decoding_method == "modified_beam_search") {
+      if (!config_.model_config.bpe_vocab.empty()) {
+        bpe_encoder_ = std::make_unique<ssentencepiece::Ssentencepiece>(
+            config_.model_config.bpe_vocab);
+      }
+
       if (!config_.hotwords_file.empty()) {
         InitHotwords();
       }
@@ -140,6 +142,12 @@ class OnlineRecognizerTransducerImpl : public OnlineRecognizerImpl {
       }
 #endif
 
+      if (!config_.model_config.bpe_vocab.empty()) {
+        auto buf = ReadFile(mgr, config_.model_config.bpe_vocab);
+        std::istringstream iss(std::string(buf.begin(), buf.end()));
+        bpe_encoder_ = std::make_unique<ssentencepiece::Ssentencepiece>(iss);
+      }
+
       if (!config_.hotwords_file.empty()) {
         InitHotwords(mgr);
       }
@@ -174,13 +182,35 @@ class OnlineRecognizerTransducerImpl : public OnlineRecognizerImpl {
     auto hws = std::regex_replace(hotwords, std::regex("/"), "\n");
     std::istringstream is(hws);
     std::vector<std::vector<int32_t>> current;
-    if (!EncodeHotwords(is, sym_, &current)) {
+    std::vector<float> current_scores;
+    if (!EncodeHotwords(is, config_.model_config.modeling_unit, sym_,
+                        bpe_encoder_.get(), &current, &current_scores)) {
       SHERPA_ONNX_LOGE("Encode hotwords failed, skipping, hotwords are : %s",
                        hotwords.c_str());
     }
+
+    int32_t num_default_hws = hotwords_.size();
+    int32_t num_hws = current.size();
+
     current.insert(current.end(), hotwords_.begin(), hotwords_.end());
-    auto context_graph =
-        std::make_shared<ContextGraph>(current, config_.hotwords_score);
+
+    if (!current_scores.empty() && !boost_scores_.empty()) {
+      current_scores.insert(current_scores.end(), boost_scores_.begin(),
+                            boost_scores_.end());
+    } else if (!current_scores.empty() && boost_scores_.empty()) {
+      current_scores.insert(current_scores.end(), num_default_hws,
+                            config_.hotwords_score);
+    } else if (current_scores.empty() && !boost_scores_.empty()) {
+      current_scores.insert(current_scores.end(), num_hws,
+                            config_.hotwords_score);
+      current_scores.insert(current_scores.end(), boost_scores_.begin(),
+                            boost_scores_.end());
+    } else {
+      // Do nothing.
+    }
+
+    auto context_graph = std::make_shared<ContextGraph>(
+        current, config_.hotwords_score, current_scores);
     auto stream =
         std::make_unique<OnlineStream>(config_.feat_config, context_graph);
     InitOnlineStream(stream.get());
@@ -333,6 +363,9 @@ class OnlineRecognizerTransducerImpl : public OnlineRecognizerImpl {
       }
     }
 
+    // reset encoder states
+    s->SetStates(model_->GetEncoderInitStates());
+
     // we keep the decoder_out
     decoder_->UpdateDecoderOut(&s->GetResult());
     Ort::Value decoder_out = std::move(s->GetResult().decoder_out);
@@ -363,12 +396,14 @@ class OnlineRecognizerTransducerImpl : public OnlineRecognizerImpl {
       exit(-1);
     }
 
-    if (!EncodeHotwords(is, sym_, &hotwords_)) {
-      SHERPA_ONNX_LOGE("Encode hotwords failed.");
-      exit(-1);
+    if (!EncodeHotwords(is, config_.model_config.modeling_unit, sym_,
+                        bpe_encoder_.get(), &hotwords_, &boost_scores_)) {
+      SHERPA_ONNX_LOGE(
+          "Failed to encode some hotwords, skip them already, see logs above "
+          "for details.");
     }
-    hotwords_graph_ =
-        std::make_shared<ContextGraph>(hotwords_, config_.hotwords_score);
+    hotwords_graph_ = std::make_shared<ContextGraph>(
+        hotwords_, config_.hotwords_score, boost_scores_);
   }
 
 #if __ANDROID_API__ >= 9
@@ -377,7 +412,7 @@ class OnlineRecognizerTransducerImpl : public OnlineRecognizerImpl {
 
     auto buf = ReadFile(mgr, config_.hotwords_file);
 
-    std::istrstream is(buf.data(), buf.size());
+    std::istringstream is(std::string(buf.begin(), buf.end()));
 
     if (!is) {
       SHERPA_ONNX_LOGE("Open hotwords file failed: %s",
@@ -385,12 +420,14 @@ class OnlineRecognizerTransducerImpl : public OnlineRecognizerImpl {
       exit(-1);
     }
 
-    if (!EncodeHotwords(is, sym_, &hotwords_)) {
-      SHERPA_ONNX_LOGE("Encode hotwords failed.");
-      exit(-1);
+    if (!EncodeHotwords(is, config_.model_config.modeling_unit, sym_,
+                        bpe_encoder_.get(), &hotwords_, &boost_scores_)) {
+      SHERPA_ONNX_LOGE(
+          "Failed to encode some hotwords, skip them already, see logs above "
+          "for details.");
     }
-    hotwords_graph_ =
-        std::make_shared<ContextGraph>(hotwords_, config_.hotwords_score);
+    hotwords_graph_ = std::make_shared<ContextGraph>(
+        hotwords_, config_.hotwords_score, boost_scores_);
   }
 #endif
 
@@ -412,7 +449,9 @@ class OnlineRecognizerTransducerImpl : public OnlineRecognizerImpl {
  private:
   OnlineRecognizerConfig config_;
   std::vector<std::vector<int32_t>> hotwords_;
+  std::vector<float> boost_scores_;
   ContextGraphPtr hotwords_graph_;
+  std::unique_ptr<ssentencepiece::Ssentencepiece> bpe_encoder_;
   std::unique_ptr<OnlineTransducerModel> model_;
   std::unique_ptr<OnlineLM> lm_;
   std::unique_ptr<OnlineTransducerDecoder> decoder_;

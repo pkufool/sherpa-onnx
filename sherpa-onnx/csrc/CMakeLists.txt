@@ -74,6 +74,8 @@ set(sources
   online-transducer-model-config.cc
   online-transducer-model.cc
   online-transducer-modified-beam-search-decoder.cc
+  online-transducer-nemo-model.cc
+  online-transducer-greedy-search-nemo-decoder.cc
   online-wenet-ctc-model-config.cc
   online-wenet-ctc-model.cc
   online-zipformer-transducer-model.cc
@@ -163,8 +165,10 @@ if(ANDROID_NDK)
 endif()
 
 target_link_libraries(sherpa-onnx-core
+  cppinyin_core
   kaldi-native-fbank-core
   kaldi-decoder-core
+  ssentencepiece_core
 )
 
 if(SHERPA_ONNX_ENABLE_GPU)
@@ -504,6 +508,7 @@ if(SHERPA_ONNX_ENABLE_TESTS)
     pad-sequence-test.cc
     slice-test.cc
     stack-test.cc
+    text2token-test.cc
     transpose-test.cc
     unbind-test.cc
     utfcpp-test.cc
