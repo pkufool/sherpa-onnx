@@ -149,7 +149,7 @@ class KeywordSpotterTransducerImpl : public KeywordSpotterImpl {
                         bpe_encoder_.get(), pinyin_encoder_.get(), &current_ids,
                         &current_kws, &current_scores, &current_thresholds)) {
       SHERPA_ONNX_LOGE("Encode keywords %s failed.", keywords.c_str());
-      return nullptr;
+      // return nullptr;
     }
 
     int32_t num_kws = current_ids.size();
