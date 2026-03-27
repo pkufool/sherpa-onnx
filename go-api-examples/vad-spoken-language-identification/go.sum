@@ -1,0 +1,12 @@
+github.com/barbashov/iso639-3 v1.0.0 h1:qCp1hUzZT8C8yHcdDo4sZQg2jHEaX6LF5H/dF9ba0qs=
+github.com/barbashov/iso639-3 v1.0.0/go.mod h1:rGod7o6KPeJ+hyBpHfhi4v7blx9sf+QsHsA7KAsdN6U=
+github.com/csukuangfj/portaudio-go v1.0.7 h1:EgQC0e8IscO3k9adha0Vfnw9fQ6x3g7SBtalr6lezrE=
+github.com/csukuangfj/portaudio-go v1.0.7/go.mod h1:QwnXVCMjYqkjjIwQh1PHzOFp97YAoU9r+DSkq2HgPcE=
+github.com/k2-fsa/sherpa-onnx-go v1.12.34 h1:25rggfrziBPp6b8oLdNpLW4HSGL14W2FMkvDwbomwl4=
+github.com/k2-fsa/sherpa-onnx-go v1.12.34/go.mod h1:B/ynRbVa5gpYoZYeYgY3zPi4MTfKk95UZueZDSIhbjk=
+github.com/k2-fsa/sherpa-onnx-go-linux v1.12.34 h1:We1gree/T6qrv8lq9HNaWlpyVY12wlvJUdA2fjEMSxM=
+github.com/k2-fsa/sherpa-onnx-go-linux v1.12.34/go.mod h1:NXEH2rsBgTdqY59YpPq6CtSBlBAXy/8a9FmpLERU97I=
+github.com/k2-fsa/sherpa-onnx-go-macos v1.12.34 h1:767VEb3gP34gi5o81TpR7No9wkub+1OpeqL4GemKzy4=
+github.com/k2-fsa/sherpa-onnx-go-macos v1.12.34/go.mod h1:ZOhUAXC62Unj0ZNfu6zxSFKcW96aXf7P3BsqiUyOBbE=
+github.com/k2-fsa/sherpa-onnx-go-windows v1.12.34 h1:fD5xzC/hoHII/efLDz95yNYwQqsVpFKOmx899IOrvKw=
+github.com/k2-fsa/sherpa-onnx-go-windows v1.12.34/go.mod h1:5AX7TU8+P/gInjglY1ijtWUM2b8iyR0QX4yEngzMe64=
